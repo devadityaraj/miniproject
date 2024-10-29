@@ -158,29 +158,40 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBZSz_JcqegYjLKPUncmV5Zzi8hLEnJ1Wg",
-            authDomain: "miniproject-5e040.firebaseapp.com",
-            databaseURL: "https://miniproject-5e040-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "miniproject-5e040",
-            storageBucket: "miniproject-5e040.appspot.com",
-            messagingSenderId: "901333926053",
-            appId: "1:901333926053:web:2929b20cb0b7ed6031cd4c"
-        };
+// Firebase configuration
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyBZSz_JcqegYjLKPUncmV5Zzi8hLEnJ1Wg",
+    authDomain: "miniproject-5e040.firebaseapp.com",
+    databaseURL: "https://miniproject-5e040-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "miniproject-5e040",
+    storageBucket: "miniproject-5e040.appspot.com",
+    messagingSenderId: "901333926053",
+    appId: "1:901333926053:web:2929b20cb0b7ed6031cd4c"
+};
 
-        firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// User login
+firebase.auth().signInWithEmailAndPassword("adityaraj94505@gmail.com", "womensafety")
+    .then((userCredential) => {
+        console.log("User signed in successfully:", userCredential.user);
+
+        // Initialize Realtime Database references after authentication
         const database = firebase.database();
         const gpsRef = database.ref("/gps");
         const alertRef = database.ref("/alert");
 
+        // Initialize the map
         const map = L.map('map').setView([20, 77], 5);
-
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        
+
         let marker;
         let alertSound = new Audio('warn.mp3'); 
         let alertActive = false;
@@ -197,13 +208,13 @@
         }
 
         function updateDriveLink(lat, lon) {
-            const driveButton = document.getElementById('drive-button');
             const driveLink = document.getElementById('drive-link');
             const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
             driveLink.href = gmapsUrl; 
-            driveButton.style.display = 'block';
+            document.getElementById('drive-button').style.display = 'block';
         }
 
+        // Alert management
         function startAlert() {
             if (!alertActive) {
                 alertActive = true;
@@ -229,8 +240,10 @@
             }
         }
 
+        // Listen to GPS data changes
         gpsRef.on("value", (snapshot) => {
             const data = snapshot.val();
+            console.log("GPS Data:", data);
 
             if (data && data.latitude && data.longitude && (data.latitude !== 0 || data.longitude !== 0)) {
                 document.getElementById('status').style.display = 'none';
@@ -238,28 +251,44 @@
                 updateMarkerPosition(latitude, longitude);
                 updateDriveLink(latitude, longitude);
             } else {
+                console.log("No valid GPS data received or latitude/longitude is zero.");
                 document.getElementById('status').style.display = 'block'; 
-                const driveButton = document.getElementById('drive-button');
-                driveButton.style.display = 'none'; 
+                document.getElementById('drive-button').style.display = 'none';
 
                 if (marker) {
                     map.removeLayer(marker);
                     marker = null;
                 }
             }
+        }, (error) => {
+            console.error("Error fetching GPS data:", error);
         });
 
+        // Listen to alert changes
         alertRef.on("value", (snapshot) => {
             const alertStatus = snapshot.val();
+            console.log("Alert Status:", alertStatus);
+
             if (alertStatus === 1) {
-                startAlert(); 
+                startAlert();
+            } else {
+                console.log("No active alert.");
             }
+        }, (error) => {
+            console.error("Error fetching alert status:", error);
         });
 
+        // Button to stop the alert
         document.getElementById('turn-off-alarm').addEventListener('click', () => {
+            console.log("Turn off alert button clicked.");
             stopAlert();
         });
-    </script>
+
+    })
+    .catch((error) => {
+        console.error("Authentication error:", error.message);
+    });
+</script>
 
 </body>
 </html>
